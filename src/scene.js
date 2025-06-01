@@ -135,16 +135,22 @@ function createSound() {
 
     const sound = new THREE.Audio(listener);
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load('src/audio/music-threejs.mp3', (buffer) => {
+    audioLoader.load('src/audio/music-3.5mins.ogg', (buffer) => {
         sound.setBuffer(buffer);
         sound.setLoop(true);
         sound.setVolume(0.5);
-        sound.play();
+        // Do not call sound.play() here!
     });
 
     return sound;
 }
-createSound();
+const sound = createSound();
+
+window.addEventListener('click', () => {
+    if (sound && !sound.isPlaying) {
+        sound.play();
+    }
+}, { once: true });
 
 let npcDirection = new THREE.Vector3();
 let directionTimer = 0;
@@ -226,17 +232,74 @@ function updateBirds(delta) {
   
 }
 
+const move = { forward: false, backward: false, left: false, right: false };
+const moveSpeed = 10;
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyW') move.forward = true;
+    if (e.code === 'KeyS') move.backward = true;
+    if (e.code === 'KeyA') move.left = true;
+    if (e.code === 'KeyD') move.right = true;
+});
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'KeyW') move.forward = false;
+    if (e.code === 'KeyS') move.backward = false;
+    if (e.code === 'KeyA') move.left = false;
+    if (e.code === 'KeyD') move.right = false;
+});
+
+
 const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta); 
 
+
+    //wasd
+    let moved = false;
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y = 0; 
+    dir.normalize();
+
+    const right = new THREE.Vector3();
+    right.crossVectors(dir, camera.up).normalize();
+    if (move.forward) {
+        console.log('moving forward');
+        camera.position.addScaledVector(dir, moveSpeed * delta);
+        moved = true;
+    }
+    if (move.backward) {
+        console.log('moving backward');
+        camera.position.addScaledVector(dir, -moveSpeed * delta);
+        moved = true;
+    }
+    if (move.left) {
+        console.log('moving left');
+        camera.position.addScaledVector(right, -moveSpeed * delta);
+        moved = true;
+    }
+    if (move.right) {
+        console.log('moving right');
+        camera.position.addScaledVector(right, moveSpeed * delta);
+        moved = true;
+    }
+
+    if (moved) {
+        console.log('Camera moved');
+    }
+
+    
+
     const height = getTerrainHeightAt(camera.position.x, camera.position.z);
     updateNPCMovement(delta);
     updateBirds(delta);
     if (camera.position.y < height+1) {
         camera.position.y = height+1;
+    }
+    if (camera.position.y > height + 2) {
+        camera.position.y = height + 2;
     }
     renderer.render(scene, camera);
 }
