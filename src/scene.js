@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { MathUtils, Vector3 } from 'three';
+import { AnimationMixer } from 'three';
 
 const scene = new THREE.Scene();
 
@@ -76,6 +77,19 @@ loader.load(
     console.error('Error loading GLB:', error);
   }
 );
+let npc, mixer;
+
+loader.load('src/models/Mike.gltf', (gltf) => {
+  npc = gltf.scene;
+  npc.position.set(0, 0, 0);
+  npc.scale.set(1.5, 1.5, 1.5);
+  scene.add(npc);
+
+  // Animation
+  mixer = new THREE.AnimationMixer(npc);
+  const walkAction = mixer.clipAction(gltf.animations[0]); 
+  walkAction.play();
+});
 
 const size = 500;
 const resolution = 128;
@@ -115,9 +129,40 @@ function getTerrainHeightAt(x, z) {
     return terrainGeo.attributes.position.getZ(idx);
 }
 
+let npcDirection = new THREE.Vector3();
+let directionTimer = 0;
+
+function updateNPCMovement(delta) {
+    if (!npc) return;
+
+  directionTimer -= delta;
+  if (directionTimer <= 0) {
+    npcDirection.set(
+      Math.random() * 2 - 1,
+      0,
+      Math.random() * 2 - 1
+    ).normalize();
+    directionTimer = 3 + Math.random() * 2;
+
+    const angle = Math.atan2(npcDirection.x, npcDirection.z);
+    npc.rotation.y = angle;
+  }
+
+  const speed = 3;
+  npc.position.add(npcDirection.clone().multiplyScalar(speed * delta));
+
+  const y = getTerrainHeightAt(npc.position.x, npc.position.z);
+  npc.position.y = y;
+}
+
+const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta); 
+
     const height = getTerrainHeightAt(camera.position.x, camera.position.z);
+    updateNPCMovement(delta);
     if (camera.position.y < height+1) {
         camera.position.y = height+1;
     }
