@@ -233,6 +233,9 @@ function updateBirds(delta) {
 }
 
 const move = { forward: false, backward: false, left: false, right: false };
+const turn = { left: false, right: false };
+
+
 const moveSpeed = 10;
 
 window.addEventListener('keydown', (e) => {
@@ -246,6 +249,17 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'KeyS') move.backward = false;
     if (e.code === 'KeyA') move.left = false;
     if (e.code === 'KeyD') move.right = false;
+});
+
+//turning
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft') turn.left = true;
+    if (e.code === 'ArrowRight') turn.right = true;
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft') turn.left = false;
+    if (e.code === 'ArrowRight') turn.right = false;
 });
 
 
@@ -286,8 +300,16 @@ function animate() {
         moved = true;
     }
 
-    if (moved) {
-        console.log('Camera moved');
+    if (turn.left || turn.right) {
+        const offset = new THREE.Vector3();
+        offset.subVectors(controls.target, camera.position);
+
+        const angle = (turn.left ? 1 : 0) * 0.05 - (turn.right ? 1 : 0) * 0.05;
+
+        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+
+        controls.target.copy(camera.position).add(offset);
+        controls.update();
     }
 
     
