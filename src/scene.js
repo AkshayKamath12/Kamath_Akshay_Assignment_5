@@ -172,6 +172,60 @@ function updateNPCMovement(delta) {
   npc.position.y = y;
 }
 
+const birds = [];
+const birdCount = 10;
+
+
+loader.load('src/models/Hummingbird.glb', (gltf) => {
+    for (let i = 0; i < birdCount; i++) {
+        const bird = gltf.scene.clone(true);
+        const x = Math.random() * 200 - 100;
+        const z = Math.random() * 200 - 100;
+        const y = getTerrainHeightAt(x, z) + 35; 
+
+        bird.position.set(x, y, z);
+        bird.scale.set(0.03, 0.03, 0.03);
+
+        bird.userData.direction = new THREE.Vector3(
+            Math.random() * 2 - 1,
+            Math.random() * 0.2 - 0.1,
+            Math.random() * 2 - 1
+        ).normalize();
+
+        bird.userData.timer = 0;
+        scene.add(bird);
+        birds.push(bird);
+    }
+});
+
+
+function updateBirds(delta) {
+    for (const bird of birds) {
+    bird.userData.timer -= delta;
+
+    if (bird.userData.timer <= 0) {
+      // Choose a new flight direction
+      bird.userData.direction.set(
+        Math.random() * 2 - 1,
+        Math.random() * 0.4 - 0.2,
+        Math.random() * 2 - 1
+      ).normalize();
+      bird.userData.timer = 3 + Math.random() * 3;
+    }
+
+    const speed = 7;
+    bird.position.add(bird.userData.direction.clone().multiplyScalar(speed * delta));
+
+    const dir = bird.userData.direction;
+    const angle = Math.atan2(dir.x, dir.z);
+    bird.rotation.y = angle;
+
+    if (bird.position.y < 10) bird.position.y = 10;
+    if (bird.position.y > 40) bird.position.y = 40;
+  }
+  
+}
+
 const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
@@ -180,6 +234,7 @@ function animate() {
 
     const height = getTerrainHeightAt(camera.position.x, camera.position.z);
     updateNPCMovement(delta);
+    updateBirds(delta);
     if (camera.position.y < height+1) {
         camera.position.y = height+1;
     }
