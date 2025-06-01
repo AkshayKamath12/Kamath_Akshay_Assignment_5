@@ -89,6 +89,7 @@ loader.load('src/models/Mike.gltf', (gltf) => {
   mixer = new THREE.AnimationMixer(npc);
   const walkAction = mixer.clipAction(gltf.animations[0]); 
   walkAction.play();
+  addSoundToRobot();
 });
 
 const size = 500;
@@ -129,10 +130,9 @@ function getTerrainHeightAt(x, z) {
     return terrainGeo.attributes.position.getZ(idx);
 }
 
+const listener = new THREE.AudioListener();
+camera.add(listener);
 function createSound() {
-    const listener = new THREE.AudioListener();
-    camera.add(listener);
-
     const sound = new THREE.Audio(listener);
     const audioLoader = new THREE.AudioLoader();
     audioLoader.load('src/audio/music-3.5mins.ogg', (buffer) => {
@@ -145,6 +145,21 @@ function createSound() {
     return sound;
 }
 const sound = createSound();
+
+function addSoundToRobot(){
+    const robotFootsteps = new THREE.PositionalAudio(listener);
+    const audioLoader = new THREE.AudioLoader();
+
+    audioLoader.load('src/audio/Footsteps-robot.ogg', (buffer) => {
+        robotFootsteps.setBuffer(buffer);
+        robotFootsteps.setRefDistance(5);
+        robotFootsteps.setLoop(true);
+        robotFootsteps.setVolume(1);
+        npc.add(robotFootsteps); 
+        robotFootsteps.play();
+    });
+}
+
 
 window.addEventListener('click', () => {
     if (sound && !sound.isPlaying) {
