@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import { MathUtils, Vector3 } from 'three';
+
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -14,11 +17,25 @@ document.body.appendChild(renderer.domElement);
 const ambientLight = new THREE.AmbientLight(0x416bdf, 0.5);
 scene.add(ambientLight);
 
-const sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(20, 50, 20);
-sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-scene.add(sun);
+const sunLight = new THREE.SpotLight(0xffffff, 0.3, 0, Math.PI / 2);
+sunLight.position.set(1000, 2000, 1000);
+sunLight.castShadow = true;
+sunLight.shadow.bias = -0.0002;
+sunLight.shadow.camera.far = 4000;
+sunLight.shadow.camera.near = 750;
+sunLight.shadow.camera.fov = 30;
+scene.add(sunLight);
+
+const sky = new Sky();
+sky.scale.setScalar( 450000 );
+
+const phi = MathUtils.degToRad( 90 );
+const theta = MathUtils.degToRad( 180 );
+const sunPosition = new Vector3().setFromSphericalCoords( 1, phi, theta );
+
+sky.material.uniforms.sunPosition.value = sunPosition;
+
+scene.add( sky );
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.minPolarAngle = Math.PI/3; // can't look below the horizon
@@ -32,6 +49,7 @@ const loader = new GLTFLoader();
 loader.load(
   'src/models/Tree.glb',                  
   function (gltf) {
+    /*
     const tree = gltf.scene;
     tree.position.set(5, 3.5, -5);        
     tree.scale.set(2, 2, 2);        
@@ -39,6 +57,19 @@ loader.load(
       if (obj.isMesh) obj.castShadow = true;
     });
     scene.add(tree);
+    */
+   for (let i = 0; i < 100; i++) {
+        const tree = gltf.scene.clone();
+        const x = (Math.random() - 0.5) * size;
+        const z = (Math.random() - 0.5) * size;
+        const height = getTerrainHeightAt(x, z) + 5;
+        tree.position.set(x, height, z);
+        tree.scale.set(5, 5, 5);
+        tree.traverse(obj => {
+            if (obj.isMesh) obj.castShadow = true;
+        });
+        scene.add(tree);
+        }
   },
   undefined,
   function (error) {
