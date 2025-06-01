@@ -2,9 +2,19 @@
 <html>
     <head>
         <title>Three.js Project</title>
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/",
+                    "three/orbitControls": "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/controls/OrbitControls.js",
+                    "three/sky": "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/objects/Sky.js"
+                }
+            }
+        </script>
     </head>
     <body>
-        <script src="https://cdn.jsdelivr.net/npm/three@0.124.0/build/three.min.js"></script>
-        <script src="src/scene.js"> </script>
+        
+        <script type="module" src="src/scene.js"> </script>
     </body>
 </html>

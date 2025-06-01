@@ -129,6 +129,23 @@ function getTerrainHeightAt(x, z) {
     return terrainGeo.attributes.position.getZ(idx);
 }
 
+function createSound() {
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    const sound = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load('src/audio/music-threejs.mp3', (buffer) => {
+        sound.setBuffer(buffer);
+        sound.setLoop(true);
+        sound.setVolume(0.5);
+        sound.play();
+    });
+
+    return sound;
+}
+createSound();
+
 let npcDirection = new THREE.Vector3();
 let directionTimer = 0;
 
