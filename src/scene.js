@@ -86,6 +86,39 @@ loader.load('src/models/Mike.gltf', (gltf) => {
   addSoundToRobot();
 });
 
+let companion, mixerCompanion;
+loader.load('src/models/dog.gltf', (gltf) => {
+  companion = gltf.scene;
+  companion.position.set(12, 0, 5);
+  companion.scale.set(1, 1, 1);
+  scene.add(companion);
+
+  mixerCompanion = new THREE.AnimationMixer(companion);
+  const walkAction = mixerCompanion.clipAction(gltf.animations[0]); 
+  walkAction.play();
+});
+
+const maxDistance = 10;
+const followSpeed = 4;
+
+function updateCompanion(delta) {
+    const playerPos = yawObject.position.clone();
+    const companionPos = companion.position.clone();
+    const distance = playerPos.distanceTo(companionPos);
+    if (distance > maxDistance) {
+        const direction = playerPos.sub(companionPos).normalize();
+        companion.position.add(direction.multiplyScalar(followSpeed * delta));
+    } 
+    companion.lookAt(yawObject.position.x, companion.position.y, yawObject.position.z);
+    companion.rotation.y += Math.PI; // Face the player
+    if (mixerCompanion) {
+        mixerCompanion.update(delta);
+    }
+    const y = getTerrainHeightAt(companion.position.x, companion.position.z) + 1.2;
+    companion.position.y = y;
+}
+
+
 const size = 500;
 const resolution = 128;
 const terrainGeo = new THREE.PlaneGeometry(size, size, resolution, resolution);
@@ -334,6 +367,7 @@ function animate() {
     if (mixer) mixer.update(delta); 
     updateNPCMovement(delta);
     updateBirds(delta);
+    updateCompanion(delta);
 
 
     const dir = new THREE.Vector3();
@@ -370,7 +404,7 @@ function animate() {
     }    
 
     const height = getTerrainHeightAt(yawObject.position.x, yawObject.position.z);
-    const eyeHeight = 0.1; 
+    const eyeHeight = 1.5; 
 
     if (yawObject.position.y < height + eyeHeight) {
         yawObject.position.y = height + eyeHeight;
