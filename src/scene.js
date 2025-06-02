@@ -108,12 +108,13 @@ function updateCompanion(delta) {
     if (distance > maxDistance) {
         const direction = playerPos.sub(companionPos).normalize();
         companion.position.add(direction.multiplyScalar(followSpeed * delta));
+        if (mixerCompanion) {
+            mixerCompanion.update(delta);
+        }
     } 
     companion.lookAt(yawObject.position.x, companion.position.y, yawObject.position.z);
     companion.rotation.y += Math.PI; // Face the player
-    if (mixerCompanion) {
-        mixerCompanion.update(delta);
-    }
+    
     const y = getTerrainHeightAt(companion.position.x, companion.position.z) + 1.2;
     companion.position.y = y;
 }
