@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { MathUtils, Vector3 } from 'three';
-import { AnimationMixer } from 'three';
 
 const scene = new THREE.Scene();
 
@@ -38,10 +36,6 @@ sky.material.uniforms.sunPosition.value = sunPosition;
 
 scene.add( sky );
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.minPolarAngle = Math.PI/3; // can't look below the horizon
-controls.maxPolarAngle = Math.PI / 2; // can't look above the horizon
-controls.update();
 
 
 
@@ -63,7 +57,7 @@ loader.load(
         const tree = gltf.scene.clone();
         const x = (Math.random() - 0.5) * size;
         const z = (Math.random() - 0.5) * size;
-        const height = getTerrainHeightAt(x, z) + 5;
+        const height = getTerrainHeightAt(x, z) + 5.5;
         tree.position.set(x, height, z);
         tree.scale.set(5, 5, 5);
         tree.traverse(obj => {
@@ -139,7 +133,6 @@ function createSound() {
         sound.setBuffer(buffer);
         sound.setLoop(true);
         sound.setVolume(0.5);
-        // Do not call sound.play() here!
     });
 
     return sound;
@@ -154,7 +147,7 @@ function addSoundToRobot(){
         robotFootsteps.setBuffer(buffer);
         robotFootsteps.setRefDistance(5);
         robotFootsteps.setLoop(true);
-        robotFootsteps.setVolume(1);
+        robotFootsteps.setVolume(1.2);
         npc.add(robotFootsteps); 
         robotFootsteps.play();
     });
@@ -194,28 +187,53 @@ function updateNPCMovement(delta) {
 }
 
 const birds = [];
-const birdCount = 10;
+const birdCount = 12;
+
+function addBirdSound(bird) {
+    const birdSound = new THREE.PositionalAudio(listener);
+    const audioLoader = new THREE.AudioLoader();
+
+    audioLoader.load('src/audio/birdSound.ogg', (buffer) => {
+        birdSound.setBuffer(buffer);
+        birdSound.setRefDistance(10);
+        birdSound.setLoop(true);
+        birdSound.setVolume(0.02);
+        bird.add(birdSound); 
+        birdSound.play();
+    });
+}
 
 
 loader.load('src/models/Hummingbird.glb', (gltf) => {
-    for (let i = 0; i < birdCount; i++) {
-        const bird = gltf.scene.clone(true);
-        const x = Math.random() * 200 - 100;
-        const z = Math.random() * 200 - 100;
-        const y = getTerrainHeightAt(x, z) + 35; 
+    console.log(gltf.animations);
 
-        bird.position.set(x, y, z);
-        bird.scale.set(0.03, 0.03, 0.03);
+    const gridSize = Math.ceil(Math.sqrt(birdCount));
+    const spacing = size / gridSize;
 
-        bird.userData.direction = new THREE.Vector3(
-            Math.random() * 2 - 1,
-            Math.random() * 0.2 - 0.1,
-            Math.random() * 2 - 1
-        ).normalize();
+    let birdIndex = 0;
+    for (let gx = 0; gx < gridSize && birdIndex < birdCount; gx++) {
+        for (let gz = 0; gz < gridSize && birdIndex < birdCount; gz++) {
+            const x = -size / 2 + (gx + 0.5) * spacing + (Math.random() - 0.5) * spacing * 0.3;
+            const z = -size / 2 + (gz + 0.5) * spacing + (Math.random() - 0.5) * spacing * 0.3;
+            const y = getTerrainHeightAt(x, z) + 35;
 
-        bird.userData.timer = 0;
-        scene.add(bird);
-        birds.push(bird);
+            const bird = gltf.scene.clone(true);
+            bird.position.set(x, y, z);
+            bird.scale.set(0.03, 0.03, 0.03);
+
+            bird.userData.direction = new THREE.Vector3(
+                Math.random() * 2 - 1,
+                Math.random() * 0.2 - 0.1,
+                Math.random() * 2 - 1
+            ).normalize();
+
+            bird.userData.timer = 0;
+            addBirdSound(bird);
+            scene.add(bird);
+            birds.push(bird);
+
+            birdIndex++;
+        }
     }
 });
 
@@ -250,7 +268,6 @@ function updateBirds(delta) {
 const move = { forward: false, backward: false, left: false, right: false };
 const turn = { left: false, right: false };
 
-
 const moveSpeed = 10;
 
 window.addEventListener('keydown', (e) => {
@@ -277,42 +294,67 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowRight') turn.right = false;
 });
 
+let pitchObject = new THREE.Object3D();
+pitchObject.add(camera);
+
+let yawObject = new THREE.Object3D();
+yawObject.position.y = 2; // Player eye height
+yawObject.add(pitchObject);
+scene.add(yawObject);
+
+document.body.addEventListener('click', () => {
+  document.body.requestPointerLock();
+});
+
+let rotationSpeed = 0.002;
+
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement === document.body) {
+    document.addEventListener('mousemove', onMouseMove, false);
+  } else {
+    document.removeEventListener('mousemove', onMouseMove, false);
+  }
+});
+
+function onMouseMove(event) {
+  const movementX = event.movementX || 0;
+  const movementY = event.movementY || 0;
+
+  yawObject.rotation.y -= movementX * rotationSpeed;
+  pitchObject.rotation.x -= movementY * rotationSpeed;
+
+  pitchObject.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObject.rotation.x)); // Limit look up/down
+}
+
 
 const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta); 
+    updateNPCMovement(delta);
+    updateBirds(delta);
 
 
-    //wasd
-    let moved = false;
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    dir.y = 0; 
+    dir.y = 0;
     dir.normalize();
 
     const right = new THREE.Vector3();
-    right.crossVectors(dir, camera.up).normalize();
+    right.crossVectors(dir, yawObject.up).normalize();
+
     if (move.forward) {
-        console.log('moving forward');
-        camera.position.addScaledVector(dir, moveSpeed * delta);
-        moved = true;
+    yawObject.position.addScaledVector(dir, moveSpeed * delta);
     }
     if (move.backward) {
-        console.log('moving backward');
-        camera.position.addScaledVector(dir, -moveSpeed * delta);
-        moved = true;
+    yawObject.position.addScaledVector(dir, -moveSpeed * delta);
     }
     if (move.left) {
-        console.log('moving left');
-        camera.position.addScaledVector(right, -moveSpeed * delta);
-        moved = true;
+    yawObject.position.addScaledVector(right, -moveSpeed * delta);
     }
     if (move.right) {
-        console.log('moving right');
-        camera.position.addScaledVector(right, moveSpeed * delta);
-        moved = true;
+    yawObject.position.addScaledVector(right, moveSpeed * delta);
     }
 
     if (turn.left || turn.right) {
@@ -325,18 +367,16 @@ function animate() {
 
         controls.target.copy(camera.position).add(offset);
         controls.update();
-    }
+    }    
 
-    
+    const height = getTerrainHeightAt(yawObject.position.x, yawObject.position.z);
+    const eyeHeight = 0.1; 
 
-    const height = getTerrainHeightAt(camera.position.x, camera.position.z);
-    updateNPCMovement(delta);
-    updateBirds(delta);
-    if (camera.position.y < height+1) {
-        camera.position.y = height+1;
+    if (yawObject.position.y < height + eyeHeight) {
+        yawObject.position.y = height + eyeHeight;
     }
-    if (camera.position.y > height + 2) {
-        camera.position.y = height + 2;
+    if (yawObject.position.y > height + eyeHeight) {
+        yawObject.position.y = height + eyeHeight;
     }
     renderer.render(scene, camera);
 }
