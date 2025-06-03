@@ -4,6 +4,7 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import { MathUtils, Vector3 } from 'three';
 
 const scene = new THREE.Scene();
+const collidableObjects = [];
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(5, 5, 5);
@@ -37,7 +38,9 @@ sky.material.uniforms.sunPosition.value = sunPosition;
 scene.add( sky );
 
 
-
+const shedX = 20;
+const shedZ = -60;
+const shedRadius = 50;
 
 const loader = new GLTFLoader();
 
@@ -57,6 +60,10 @@ loader.load(
         const tree = gltf.scene.clone();
         const x = (Math.random() - 0.5) * size;
         const z = (Math.random() - 0.5) * size;
+        const distance = Math.sqrt((x - shedX) ** 2 + (z - shedZ) ** 2);
+        if (distance < shedRadius) {
+            continue; 
+        }
         const height = getTerrainHeightAt(x, z) + 5.5;
         tree.position.set(x, height, z);
         tree.scale.set(5, 5, 5);
@@ -102,6 +109,7 @@ const maxDistance = 10;
 const followSpeed = 4;
 
 function updateCompanion(delta) {
+    if (!companion || !yawObject) return;
     const playerPos = yawObject.position.clone();
     const companionPos = companion.position.clone();
     const distance = playerPos.distanceTo(companionPos);
@@ -360,12 +368,132 @@ function onMouseMove(event) {
   pitchObject.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObject.rotation.x)); // Limit look up/down
 }
 
+function makeShed(x, z){
+    //make 3 walls
+    const wallGeometry = new THREE.BoxGeometry(20, 10, 0.1);
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brown color for walls
+    const wall1 = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall1.position.set(x, 2.5, z); // Back wall
+    wall1.castShadow = true;
+    wall1.receiveShadow = true;
+    scene.add(wall1);
+    collidableObjects.push(wall1);
+
+    const wall2 = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall2.position.set(x - 10, 2.5, z + 10); // Left wall
+    wall2.rotation.y = Math.PI / 2; // Rotate to face the left
+    wall2.castShadow = true;
+    wall2.receiveShadow = true;
+    scene.add(wall2);
+    collidableObjects.push(wall2);
+
+    const wall3 = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall3.position.set(x + 10, 2.5, z + 10); // Right wall
+    wall3.rotation.y = -Math.PI / 2; // Rotate to face the right
+    wall3.castShadow = true;
+    wall3.receiveShadow = true;
+    scene.add(wall3);
+    collidableObjects.push(wall3);
+
+    //make roof
+    //make two reactangles that meed at the top
+    const roofGeometry = new THREE.BoxGeometry(14.14, 0.1, 20);
+    const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brown color for roof
+    const roof1 = new THREE.Mesh(roofGeometry, roofMaterial);
+    roof1.position.set(x-5, 12.5, z+10); // Roof position
+    roof1.rotation.z = Math.PI / 4; 
+    roof1.castShadow = true;
+    roof1.receiveShadow = true;
+    scene.add(roof1);
+
+    const roof2 = new THREE.Mesh(roofGeometry, roofMaterial);
+    roof2.position.set(x+5, 12.5, z+10); // Roof position
+    roof2.rotation.z = -Math.PI / 4;
+    roof2.castShadow = true;
+    roof2.receiveShadow = true;
+    scene.add(roof2);
+
+    const backTriangle = new THREE.Shape();
+    backTriangle.moveTo(-10, 0);     
+    backTriangle.lineTo(10, 0);       
+    backTriangle.lineTo(0, 10);      
+    backTriangle.lineTo(-10, 0); 
+    const backGeometry = new THREE.ShapeGeometry(backTriangle);
+    const backMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brown color for back triangle
+    const backTriangleMesh = new THREE.Mesh(backGeometry, backMaterial);
+    backTriangleMesh.position.set(x, 7.5, z); // Back triangle position
+    backTriangleMesh.castShadow = true;
+    backTriangleMesh.receiveShadow = true;
+    scene.add(backTriangleMesh);
+}
+makeShed(shedX, shedZ);
+
+
+let mixerCampfire;
+function makeContentInShed(x, z) {
+    // load src/models/campfire/campfire.gltf 
+    loader.load('src/models/campfire/campfire.gltf', (gltf) => {
+        const campfire = gltf.scene;
+        const terrainHeight = getTerrainHeightAt(x-4, z+1.5);
+        campfire.position.set(x - 4, terrainHeight, z + 1.5);
+        campfire.scale.set(9, 9, 9);
+        campfire.traverse(obj => {
+            if (obj.isMesh) obj.castShadow = true;
+        });
+        scene.add(campfire);
+
+        const fireLight = new THREE.PointLight(0xffa040, 5, 40, 2); // color, intensity, distance, decay
+        fireLight.position.set(x - 4, terrainHeight + 6, z + 1.5); // slightly above the fire
+        fireLight.castShadow = true;
+        scene.add(fireLight);
+        
+        mixerCampfire = new THREE.AnimationMixer(campfire);
+        console.log(gltf.animations);
+        const campfireAnimation = mixerCampfire.clipAction(gltf.animations[0]);
+        campfireAnimation.play();
+        campfireAnimation.setLoop(THREE.LoopRepeat, Infinity);
+
+        /*
+        const campfireSound = new THREE.PositionalAudio(listener);
+        const audioLoader = new THREE.AudioLoader();
+        audioLoader.load('src/audio/campfire.ogg', (buffer) => {
+            campfireSound.setBuffer(buffer);
+            campfireSound.setRefDistance(10);
+            campfireSound.setLoop(true);
+            campfireSound.setVolume(0.1);
+            campfire.add(campfireSound); 
+            campfireSound.play();
+        });
+        */
+
+    });
+    
+  
+}
+
+makeContentInShed(shedX, shedZ + 5);
+
+function isPositionFree(position, radius = 2) {
+    const playerSphere = new THREE.Sphere(position, radius);
+    for (const obj of collidableObjects) {
+        obj.geometry.computeBoundingSphere();
+        const objWorldPos = new THREE.Vector3();
+        obj.getWorldPosition(objWorldPos);
+        const objSphere = obj.geometry.boundingSphere.clone().applyMatrix4(obj.matrixWorld);
+        if (playerSphere.intersectsSphere(objSphere)) {
+            return false; 
+        }
+    }
+    return true; 
+}
+
 
 const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta); 
+    if(mixerCampfire) mixerCampfire.update(delta);
     updateNPCMovement(delta);
     updateBirds(delta);
     updateCompanion(delta);
@@ -392,17 +520,7 @@ function animate() {
     yawObject.position.addScaledVector(right, moveSpeed * delta);
     }
 
-    if (turn.left || turn.right) {
-        const offset = new THREE.Vector3();
-        offset.subVectors(controls.target, camera.position);
 
-        const angle = (turn.left ? 1 : 0) * 0.05 - (turn.right ? 1 : 0) * 0.05;
-
-        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-
-        controls.target.copy(camera.position).add(offset);
-        controls.update();
-    }    
 
     const height = getTerrainHeightAt(yawObject.position.x, yawObject.position.z);
     const eyeHeight = 1.5; 
