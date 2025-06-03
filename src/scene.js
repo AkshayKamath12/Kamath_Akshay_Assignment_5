@@ -434,7 +434,7 @@ function makeContentInShed(x, z) {
     makeCampfire(x, z);
     makeBed(x + 4, z + 8);
     makeBackpack(x + 6, z - 2);
-    makeLantern(x + 6, z - 2);
+    makeLantern(x + 6, z - 4);
     
 }
 
@@ -517,7 +517,6 @@ function makeLantern(x, z) {
     });
     scene.add(lantern);
 
-    // Try to find the bulb mesh and make it glow
     lantern.traverse(obj => {
       if (obj.isMesh && obj.name.toLowerCase().includes('bulb')) {
         obj.material = obj.material.clone();
@@ -526,14 +525,11 @@ function makeLantern(x, z) {
       }
     });
 
-    // Place the light at the lantern's center or bulb position
-    // If you know the bulb's offset, adjust here
-    const lanternLight = new THREE.PointLight(0xfff8b0, 20, 30, 1); // much brighter, larger radius
-    lanternLight.position.set(x, terrainHeight + 11, z + 2); // adjust if you know the bulb's offset
+    const lanternLight = new THREE.PointLight(0xfff8b0, 20, 30, 1); 
+    lanternLight.position.set(x, terrainHeight + 11, z + 2);
     lanternLight.castShadow = true;
     scene.add(lanternLight);
 
-    // Add ledge to top of lantern
     const ledgeGeometry = new THREE.BoxGeometry(1, 0.1, 1);
     const ledgeMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
     const ledge = new THREE.Mesh(ledgeGeometry, ledgeMaterial);
