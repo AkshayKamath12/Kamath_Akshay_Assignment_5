@@ -453,18 +453,18 @@ function makeContentInShed(x, z) {
         campfireAnimation.play();
         campfireAnimation.setLoop(THREE.LoopRepeat, Infinity);
 
-        /*
+        
         const campfireSound = new THREE.PositionalAudio(listener);
         const audioLoader = new THREE.AudioLoader();
         audioLoader.load('src/audio/campfire.ogg', (buffer) => {
             campfireSound.setBuffer(buffer);
             campfireSound.setRefDistance(10);
             campfireSound.setLoop(true);
-            campfireSound.setVolume(0.1);
+            campfireSound.setVolume(1);
             campfire.add(campfireSound); 
             campfireSound.play();
         });
-        */
+        
 
     });
     
