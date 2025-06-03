@@ -84,6 +84,14 @@ loader.load('src/models/mike/Mike.gltf', (gltf) => {
   npc = gltf.scene;
   npc.position.set(0, 0, 0);
   npc.scale.set(1.5, 1.5, 1.5);
+  npc.traverse(obj => {
+    if (obj.isMesh) obj.castShadow = true;
+  });
+  npc.castShadow = true;
+  npc.receiveShadow = true;
+  npc.userData = {};
+  npc.userData.npcDirection = new THREE.Vector3();
+  npc.userData.directionTimer = 0;
   scene.add(npc);
 
   // Animation
@@ -202,30 +210,40 @@ window.addEventListener('click', () => {
     }
 }, { once: true });
 
-let npcDirection = new THREE.Vector3();
-let directionTimer = 0;
 
-function updateNPCMovement(delta) {
+const speed = 3;
+function updateNPCMovement(npc, delta) {
     if (!npc) return;
 
-  directionTimer -= delta;
-  if (directionTimer <= 0) {
-    npcDirection.set(
-      Math.random() * 2 - 1,
-      0,
-      Math.random() * 2 - 1
-    ).normalize();
-    directionTimer = 3 + Math.random() * 2;
+    if (!npc.userData.npcDirection) {
+        npc.userData.npcDirection = new THREE.Vector3(
+            Math.random() * 2 - 1,
+            0,
+            Math.random() * 2 - 1
+        ).normalize();
+    }
+    if (npc.userData.directionTimer === undefined) {
+        npc.userData.directionTimer = 3 + Math.random() * 2;
+    }
 
-    const angle = Math.atan2(npcDirection.x, npcDirection.z);
+    npc.userData.directionTimer -= delta;
+    if (npc.userData.directionTimer <= 0) {
+        npc.userData.npcDirection.set(
+            Math.random() * 2 - 1,
+            0,
+            Math.random() * 2 - 1
+        ).normalize();
+        npc.userData.directionTimer = 3 + Math.random() * 2;
+    }
+
+    const angle = Math.atan2(npc.userData.npcDirection.x, npc.userData.npcDirection.z);
     npc.rotation.y = angle;
-  }
 
-  const speed = 3;
-  npc.position.add(npcDirection.clone().multiplyScalar(speed * delta));
+    
+    npc.position.add(npc.userData.npcDirection.clone().multiplyScalar(speed * delta));
 
-  const y = getTerrainHeightAt(npc.position.x, npc.position.z);
-  npc.position.y = y;
+    const y = getTerrainHeightAt(npc.position.x, npc.position.z);
+    npc.position.y = y;
 }
 
 const birds = [];
@@ -311,6 +329,19 @@ const move = { forward: false, backward: false, left: false, right: false };
 const turn = { left: false, right: false };
 
 const moveSpeed = 10;
+
+//holding shift to run
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'ShiftLeft') {
+        moveSpeed = 30; // Increase speed when holding shift
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'ShiftLeft') {
+        moveSpeed = 10; // Reset speed when releasing shift
+    }
+});
 
 window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyW') move.forward = true;
@@ -622,7 +653,7 @@ function animate() {
     if (mixer) mixer.update(delta); 
     if(mixerCampfire) mixerCampfire.update(delta);
     if(mixerMayor) mixerMayor.update(delta);
-    updateNPCMovement(delta);
+    if(npc) updateNPCMovement(npc, delta);
     updateBirds(delta);
     updateCompanion(delta);
 
