@@ -435,11 +435,12 @@ function makeContentInShed(x, z) {
     makeBed(x + 4, z + 8);
     makeBackpack(x + 6, z - 2);
     makeLantern(x + 6, z - 4);
-    
+    makeCrate(x - 6, z + 12);
+    makePainting(x + 9.9, z + 8);
+    makeBookshelf(x - 9, z + 8);
 }
 
 function makeCampfire(x, z) {
-  // load src/models/campfire/campfire.gltf 
     loader.load('src/models/campfire/campfire.gltf', (gltf) => {
         const campfire = gltf.scene;
         const terrainHeight = getTerrainHeightAt(x-4, z+1.5);
@@ -481,7 +482,8 @@ function makeBed(x, z) {
     const terrainHeight = getTerrainHeightAt(x, z);
     bed.position.set(x, terrainHeight + 0.1, z);
     bed.scale.set(20, 20, 20);
-    bed.rotation.y = Math.PI; // Rotate to face the shed
+    bed.rotation.y = Math.PI; 
+    bed.rotation.x = -Math.PI / 16; // Slightly tilt the back of the bed up due to the uneven terrain
     bed.castShadow = true;
     bed.traverse(obj => {
       if (obj.isMesh) obj.castShadow = true;
@@ -496,7 +498,6 @@ function makeBackpack(x, z) {
     const terrainHeight = getTerrainHeightAt(x, z);
     backpack.position.set(x, terrainHeight + 4, z);
     backpack.scale.set(2, 2, 2);
-    //backpack.rotation.y = Math.PI; // Rotate to face the shed
     backpack.castShadow = true;
     backpack.traverse(obj => {
       if (obj.isMesh) obj.castShadow = true;
@@ -528,6 +529,9 @@ function makeLantern(x, z) {
     const lanternLight = new THREE.PointLight(0xfff8b0, 20, 30, 1); 
     lanternLight.position.set(x, terrainHeight + 11, z + 2);
     lanternLight.castShadow = true;
+    lanternLight.shadow.mapSize.width = 1024;
+    lanternLight.shadow.mapSize.height = 1024;
+    lanternLight.shadow.bias = -0.005;
     scene.add(lanternLight);
 
     const ledgeGeometry = new THREE.BoxGeometry(1, 0.1, 1);
@@ -540,7 +544,53 @@ function makeLantern(x, z) {
   });
 }
 
+function makeCrate(x, z) {
+  loader.load('src/models/crate/Crate.glb', (gltf) => {
+    const crate = gltf.scene;
+    const terrainHeight = getTerrainHeightAt(x, z);
+    crate.position.set(x, terrainHeight + 0.5, z);
+    crate.scale.set(1, 1, 1);
+    crate.castShadow = true;
+    crate.traverse(obj => {
+      if (obj.isMesh) obj.castShadow = true;
+    });
+    scene.add(crate);
+  });
+}
+
+function makePainting(x, z) {
+  loader.load('src/models/painting/Painting.glb', (gltf) => {
+    const painting = gltf.scene;
+    const terrainHeight = getTerrainHeightAt(x, z);
+    painting.position.set(x, terrainHeight + 6, z);
+    painting.rotation.y = Math.PI / 2;
+    painting.scale.set(0.2, 0.2, 0.2);
+    painting.castShadow = true;
+    painting.traverse(obj => {
+      if (obj.isMesh) obj.castShadow = true;
+    });
+    scene.add(painting);
+  });
+}
+
+function makeBookshelf(x, z) {
+  loader.load('src/models/bookshelf/Bookshelf.glb', (gltf) => {
+    const bookshelf = gltf.scene;
+    const terrainHeight = getTerrainHeightAt(x, z);
+    bookshelf.position.set(x, terrainHeight + 1, z);
+    bookshelf.rotation.y = -Math.PI / 2; // Rotate to face the shed
+    bookshelf.rotation.x = -Math.PI / 32; // Slightly tilt the top of the bookshelf up due to the uneven terrain
+    bookshelf.scale.set(5, 5, 5);
+    bookshelf.castShadow = true;
+    bookshelf.traverse(obj => {
+      if (obj.isMesh) obj.castShadow = true;
+    });
+    scene.add(bookshelf);
+  });
+}
+
 makeContentInShed(shedX, shedZ + 5);
+
 
 
 const clock = new THREE.Clock();
