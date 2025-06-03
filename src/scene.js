@@ -592,6 +592,28 @@ function makeBookshelf(x, z) {
 makeContentInShed(shedX, shedZ + 5);
 
 
+let mixerMayor;
+function makeMayorReadingModel(x, y, z) {
+    loader.load('src/models/mayor_reading/scene.gltf', (gltf) => {
+        const mayor = gltf.scene;
+        const terrainHeight = getTerrainHeightAt(x, z);
+        mayor.position.set(x, terrainHeight - 0.5, z);
+        mayor.scale.set(3, 3, 3);
+
+        mayor.rotation.x = -Math.PI / 16; // Slightly tilt the back of the mayor up due to the uneven terrain
+        mayor.traverse(obj => {
+            if (obj.isMesh) obj.castShadow = true;
+        });
+        scene.add(mayor);
+
+        mixerMayor = new THREE.AnimationMixer(mayor);
+        const walkAction = mixerMayor.clipAction(gltf.animations[0]); 
+        walkAction.play();
+    });
+}
+
+makeMayorReadingModel(35, 0, -37);
+
 
 const clock = new THREE.Clock();
 function animate() {
@@ -599,6 +621,7 @@ function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta); 
     if(mixerCampfire) mixerCampfire.update(delta);
+    if(mixerMayor) mixerMayor.update(delta);
     updateNPCMovement(delta);
     updateBirds(delta);
     updateCompanion(delta);
