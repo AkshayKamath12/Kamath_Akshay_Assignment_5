@@ -45,7 +45,7 @@ const shedRadius = 50;
 const loader = new GLTFLoader();
 
 loader.load(
-  'src/models/Tree.glb',                  
+  'src/models/tree/Tree.glb',                  
   function (gltf) {
     /*
     const tree = gltf.scene;
@@ -80,7 +80,7 @@ loader.load(
 );
 let npc, mixer;
 
-loader.load('src/models/Mike.gltf', (gltf) => {
+loader.load('src/models/mike/Mike.gltf', (gltf) => {
   npc = gltf.scene;
   npc.position.set(0, 0, 0);
   npc.scale.set(1.5, 1.5, 1.5);
@@ -94,7 +94,7 @@ loader.load('src/models/Mike.gltf', (gltf) => {
 });
 
 let companion, mixerCompanion;
-loader.load('src/models/dog.gltf', (gltf) => {
+loader.load('src/models/dog/dog.gltf', (gltf) => {
   companion = gltf.scene;
   companion.position.set(12, 0, 5);
   companion.scale.set(1, 1, 1);
@@ -246,7 +246,7 @@ function addBirdSound(bird) {
 }
 
 
-loader.load('src/models/Hummingbird.glb', (gltf) => {
+loader.load('src/models/hummingbird/Hummingbird.glb', (gltf) => {
     console.log(gltf.animations);
 
     const gridSize = Math.ceil(Math.sqrt(birdCount));
@@ -431,7 +431,13 @@ makeShed(shedX, shedZ);
 
 let mixerCampfire;
 function makeContentInShed(x, z) {
-    // load src/models/campfire/campfire.gltf 
+    makeCampfire(x, z);
+    makeBed(x + 4, z + 1.5);
+    
+}
+
+function makeCampfire(x, z) {
+  // load src/models/campfire/campfire.gltf 
     loader.load('src/models/campfire/campfire.gltf', (gltf) => {
         const campfire = gltf.scene;
         const terrainHeight = getTerrainHeightAt(x-4, z+1.5);
@@ -464,28 +470,25 @@ function makeContentInShed(x, z) {
             campfire.add(campfireSound); 
             campfireSound.play();
         });
-        
-
     });
-    
-  
+}
+
+function makeBed(x, z) {
+  loader.load('src/models/bed/Bedroll.glb', (gltf) => {
+    const bed = gltf.scene;
+    const terrainHeight = getTerrainHeightAt(x, z);
+    bed.position.set(x, terrainHeight + 0.1, z);
+    bed.scale.set(20, 20, 20);
+    bed.rotation.y = Math.PI; // Rotate to face the shed
+    bed.castShadow = true;
+    bed.traverse(obj => {
+      if (obj.isMesh) obj.castShadow = true;
+    });
+    scene.add(bed);
+  });
 }
 
 makeContentInShed(shedX, shedZ + 5);
-
-function isPositionFree(position, radius = 2) {
-    const playerSphere = new THREE.Sphere(position, radius);
-    for (const obj of collidableObjects) {
-        obj.geometry.computeBoundingSphere();
-        const objWorldPos = new THREE.Vector3();
-        obj.getWorldPosition(objWorldPos);
-        const objSphere = obj.geometry.boundingSphere.clone().applyMatrix4(obj.matrixWorld);
-        if (playerSphere.intersectsSphere(objSphere)) {
-            return false; 
-        }
-    }
-    return true; 
-}
 
 
 const clock = new THREE.Clock();
