@@ -152,7 +152,7 @@ loader.load('src/models/dog/dog.gltf', (gltf) => {
   walkAction.play();
 });
 
-const maxDistance = 10;
+const maxDistance = 6;
 const followSpeed = 4;
 
 function updateCompanion(delta) {
@@ -282,7 +282,7 @@ function updateNPCMovement(npc, delta, speed) {
     npc.position.add(npc.userData.npcDirection.clone().multiplyScalar(speed * delta));
 
     const y = getTerrainHeightAt(npc.position.x, npc.position.z);
-    npc.position.y = y + 2; // Adjust height to be above the terrain
+    npc.position.y = y + 1; // Adjust height to be above the terrain
 }
 
 const birds = [];
@@ -663,6 +663,10 @@ makeContentInShed(shedX, shedZ + 5);
 
 
 let mixerMayor;
+let lastFlipIndex = -1;
+let flipTimes = [2.5, 3.1, 3.7]; // Replace with your actual flip times (in seconds)
+let pageFlipSound;
+
 function makeMayorReadingModel(x, y, z) {
     loader.load('src/models/mayor_reading/scene.gltf', (gltf) => {
         const mayor = gltf.scene;
