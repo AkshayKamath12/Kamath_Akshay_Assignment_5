@@ -40,7 +40,13 @@ scene.add( sky );
 
 const shedX = 20;
 const shedZ = -60;
-const shedRadius = 50;
+const shedRadius = 100;
+
+const dragonX = 100;
+const dragonZ = 75;
+const dragonRadius = 50;
+
+
 
 const loader = new GLTFLoader();
 
@@ -61,9 +67,11 @@ loader.load(
         const x = (Math.random() - 0.5) * size;
         const z = (Math.random() - 0.5) * size;
         const distance = Math.sqrt((x - shedX) ** 2 + (z - shedZ) ** 2);
-        if (distance < shedRadius) {
+        const distanceToDragon = Math.sqrt((x - dragonX) ** 2 + (z - dragonZ) ** 2);
+        if (distance < shedRadius || distanceToDragon < dragonRadius) {
             continue; 
-        }
+        }          
+
         const height = getTerrainHeightAt(x, z) + 5.5;
         tree.position.set(x, height, z);
         tree.scale.set(5, 5, 5);
@@ -99,6 +107,37 @@ loader.load('src/models/mike/Mike.gltf', (gltf) => {
   const walkAction = mixer.clipAction(gltf.animations[0]); 
   walkAction.play();
   addSoundToRobot();
+});
+
+let dragon, mixerDragon;
+const dragonSpeed = 5;
+loader.load('src/models/dragon/scene.gltf', (gltf) => {
+  dragon = gltf.scene;
+  dragon.position.set(dragonX, 0, dragonZ);
+  dragon.scale.set(30, 30, 30);
+  dragon.traverse(obj => {
+    if (obj.isMesh) {
+      obj.castShadow = true;
+      obj.material = obj.material.clone();
+      obj.material.color.multiplyScalar(1.08); 
+
+    }
+  });
+  scene.add(dragon);
+
+  const dragonSpot = new THREE.SpotLight(0xffffff, 40, 100, Math.PI / 2.5, 0.7, 1.5);
+  dragonSpot.position.set(-50, 100, 50); 
+  dragonSpot.target = dragon;
+  dragonSpot.castShadow = true;
+  dragonSpot.shadow.mapSize.width = 2048;
+  dragonSpot.shadow.mapSize.height = 2048;
+  dragonSpot.shadow.bias = -0.003;
+  scene.add(dragonSpot);
+  scene.add(dragonSpot.target);
+
+  mixerDragon = new THREE.AnimationMixer(dragon);
+  const flyAction = mixerDragon.clipAction(gltf.animations[0]); 
+  flyAction.play();
 });
 
 let companion, mixerCompanion;
@@ -211,8 +250,8 @@ window.addEventListener('click', () => {
 }, { once: true });
 
 
-const speed = 3;
-function updateNPCMovement(npc, delta) {
+const mikeSpeed = 3;
+function updateNPCMovement(npc, delta, speed) {
     if (!npc) return;
 
     if (!npc.userData.npcDirection) {
@@ -243,7 +282,7 @@ function updateNPCMovement(npc, delta) {
     npc.position.add(npc.userData.npcDirection.clone().multiplyScalar(speed * delta));
 
     const y = getTerrainHeightAt(npc.position.x, npc.position.z);
-    npc.position.y = y;
+    npc.position.y = y + 2; // Adjust height to be above the terrain
 }
 
 const birds = [];
@@ -328,12 +367,12 @@ function updateBirds(delta) {
 const move = { forward: false, backward: false, left: false, right: false };
 const turn = { left: false, right: false };
 
-const moveSpeed = 10;
+var moveSpeed = 10;
 
 //holding shift to run
 window.addEventListener('keydown', (e) => {
     if (e.code === 'ShiftLeft') {
-        moveSpeed = 30; // Increase speed when holding shift
+        moveSpeed = 20; // Increase speed when holding shift
     }
 });
 
@@ -500,7 +539,7 @@ function makeCampfire(x, z) {
             campfireSound.setBuffer(buffer);
             campfireSound.setRefDistance(10);
             campfireSound.setLoop(true);
-            campfireSound.setVolume(1);
+            campfireSound.setVolume(3);
             campfire.add(campfireSound); 
             campfireSound.play();
         });
@@ -653,7 +692,10 @@ function animate() {
     if (mixer) mixer.update(delta); 
     if(mixerCampfire) mixerCampfire.update(delta);
     if(mixerMayor) mixerMayor.update(delta);
-    if(npc) updateNPCMovement(npc, delta);
+    if(mixerDragon) mixerDragon.update(delta);
+    if(npc) updateNPCMovement(npc, delta, mikeSpeed);
+    if(dragon) updateNPCMovement(dragon, delta, dragonSpeed);
+
     updateBirds(delta);
     updateCompanion(delta);
 
