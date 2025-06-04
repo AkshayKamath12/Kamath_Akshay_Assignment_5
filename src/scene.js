@@ -221,7 +221,7 @@ function createSound() {
     audioLoader.load('src/audio/music-3.5mins.ogg', (buffer) => {
         sound.setBuffer(buffer);
         sound.setLoop(true);
-        sound.setVolume(0.5);
+        sound.setVolume(0.4);
     });
 
     return sound;
@@ -236,7 +236,7 @@ function addSoundToRobot(){
         robotFootsteps.setBuffer(buffer);
         robotFootsteps.setRefDistance(5);
         robotFootsteps.setLoop(true);
-        robotFootsteps.setVolume(1.2);
+        robotFootsteps.setVolume(2);
         npc.add(robotFootsteps); 
         robotFootsteps.play();
     });
@@ -275,6 +275,14 @@ function updateNPCMovement(npc, delta, speed) {
         npc.userData.directionTimer = 3 + Math.random() * 2;
     }
 
+    const nextPos = npc.position.clone().add(npc.userData.npcDirection.clone().multiplyScalar(speed * delta));
+    const distToShed = Math.sqrt((nextPos.x - shedX) ** 2 + (nextPos.z - shedZ) ** 2);
+    if (distToShed < 8) { 
+        const away = nextPos.clone().sub(new THREE.Vector3(shedX, nextPos.y, shedZ)).normalize();
+        npc.userData.npcDirection.copy(away);
+        npc.userData.directionTimer = 1 + Math.random(); 
+    }
+
     const angle = Math.atan2(npc.userData.npcDirection.x, npc.userData.npcDirection.z);
     npc.rotation.y = angle;
 
@@ -282,7 +290,7 @@ function updateNPCMovement(npc, delta, speed) {
     npc.position.add(npc.userData.npcDirection.clone().multiplyScalar(speed * delta));
 
     const y = getTerrainHeightAt(npc.position.x, npc.position.z);
-    npc.position.y = y + 1; // Adjust height to be above the terrain
+    npc.position.y = y + 1; 
 }
 
 const birds = [];
